@@ -1,1 +1,0 @@
-Every request should have 64*n size to faster speed even if the fragmentation is big.
