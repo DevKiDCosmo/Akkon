@@ -1,0 +1,2 @@
+Logger is an own subprocess that is responsible for logging messages. It receives messages from the main process via a multiprocessing queue and writes them to a log file. The logger also handles log rotation, ensuring that log files do not grow indefinitely.
+Logger works as an watchdog process. If crash happens, it will restart itself and send error to dev server of Akkon for debugging.
