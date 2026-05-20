@@ -34,3 +34,12 @@ make -j4
 - Databases are created as UUID-named files in `db/`.
 - `master.db` stores the registry.
 - Unmapped `.db` files in `db/` are imported with status `unmapped` unless `--no-import` is set.
+
+
+DESIGN PHILOSOPHY:
+
+All information that the user can give or must give to identify are always hashed. Like email, pw etc.
+All information that must be retrieved must be encoded or in plain text or encrypted in a ways or another.
+
+
+--mode user etc are used for predefined setting for db. instead of --modex scrip file.
