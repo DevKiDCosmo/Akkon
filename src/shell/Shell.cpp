@@ -21,10 +21,10 @@ void Shell::printUsage() {
 
 void Shell::registerAllArguments() {
     auto& reg = ArgumentRegistry::instance();
-    reg.registerArgument({"--help", false, "flag", "Show help", RuntimeDomain::RUNTIME_META});
-    reg.registerArgument({"-c", true, "integer", "Number of databases", RuntimeDomain::RUNTIME_META});
-    reg.registerArgument({"--no-import", false, "flag", "Skip importing unmapped DBs", RuntimeDomain::RUNTIME_META});
-    reg.registerArgument({"--debug", false, "flag", "Enable debug mode", RuntimeDomain::RUNTIME_META});
+    reg.registerArgument({"--help", false, "flag", "Show help", RuntimeDomain::RUNTIME});
+    reg.registerArgument({"-c", true, "integer", "Number of databases", RuntimeDomain::RUNTIME});
+    reg.registerArgument({"--no-import", false, "flag", "Skip importing unmapped DBs", RuntimeDomain::RUNTIME});
+    reg.registerArgument({"--debug", false, "flag", "Enable debug mode", RuntimeDomain::RUNTIME});
 }
 
 int Shell::run(int argc, char* argv[]) {

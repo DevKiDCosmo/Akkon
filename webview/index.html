@@ -19,27 +19,37 @@
         
         <main>
             <div class="card metrics-card">
-                <h2>Memory Usage</h2>
-                <div class="metric">
-                    <span class="label">Allocated</span>
-                    <span class="value" id="mem-allocated">0 MB</span>
-                </div>
-                <div class="metric">
-                    <span class="label">Capacity</span>
-                    <span class="value" id="mem-capacity">0 MB</span>
-                </div>
+                <h2>MEMORY USAGE</h2>
+                <div class="metric"><span class="label">ALLOCATED</span><span class="value" id="mem-allocated">0 MB</span></div>
+                <div class="metric"><span class="label">CAPACITY</span><span class="value" id="mem-capacity">0 MB</span></div>
             </div>
 
             <div class="card queries-card">
-                <h2>Query Engine Stats</h2>
-                <div class="metric">
-                    <span class="label">Total Queries</span>
-                    <span class="value" id="total-queries">0</span>
-                </div>
-                <div class="metric">
-                    <span class="label">Hit Rate</span>
-                    <span class="value" id="hit-rate">0%</span>
-                </div>
+                <h2>QUERY STATS</h2>
+                <div class="metric"><span class="label">TOTAL</span><span class="value" id="total-queries">0</span></div>
+                <div class="metric"><span class="label">HIT RATE</span><span class="value" id="hit-rate">0%</span></div>
+            </div>
+
+            <div class="card insert-card">
+                <h2>REGISTER USER</h2>
+                <input type="text" id="ins-email" placeholder="EMAIL">
+                <input type="password" id="ins-pass" placeholder="PASSWORD">
+                <button onclick="insertUser()">INSERT</button>
+                <div class="metric" style="margin-top:15px"><span class="label">STATUS</span><span class="value" id="ins-status">-</span></div>
+            </div>
+
+            <div class="card search-card">
+                <h2>QUERY DB</h2>
+                <input type="text" id="qry-email" placeholder="EMAIL">
+                <button onclick="queryUser()">CHECK</button>
+                <div class="metric" style="margin-top:15px"><span class="label">RESULT</span><span class="value" id="qry-result">-</span></div>
+            </div>
+
+            <div class="card debug-card">
+                <h2>DEBUG TOOLS</h2>
+                <div class="metric"><span class="label">PORT</span><span class="value" id="dbg-port">8080</span></div>
+                <div class="metric"><span class="label">INTERFACE</span><span class="value" id="dbg-interface">0.0.0.0</span></div>
+                <button onclick="fetchDebug()" style="margin-top:15px">REFRESH INTERFACES</button>
             </div>
         </main>
     </div>

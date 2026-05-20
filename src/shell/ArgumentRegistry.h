@@ -10,7 +10,7 @@ struct ArgumentMetadata {
     bool takes_arg = false; // if true, expects a value after the argument
     std::string format;     // e.g., "integer", "string", "flag"
     std::string help;       // help text
-    memory::RuntimeDomain domain = memory::RuntimeDomain::RUNTIME_META;
+    memory::RuntimeDomain domain = memory::RuntimeDomain::RUNTIME;
 };
 
 struct ParseResult {

@@ -20,6 +20,8 @@ make -j4
 ./Akkon -c 3 --no-import
 ./Akkon -c 2 --debug
 ./Akkon --help
+ctest --output-on-failure
+ctest -L benchmark --output-on-failure
 ```
 
 ## Features
@@ -28,6 +30,7 @@ make -j4
 - **Arena Allocator**: Efficient O(1) allocation and reset for each domain
 - **Argument Registry**: Type-safe command-line argument registration with metadata
 - **Debug Mode**: Warns on unregistered arguments instead of erroring (with `--debug`)
+- **CTest Benchmark**: `benchmark_1m` is registered as a CTest target
 
 ## Notes
 

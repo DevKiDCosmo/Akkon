@@ -10,8 +10,8 @@ import random
 def start_http_server():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     Handler = http.server.SimpleHTTPRequestHandler
-    with socketserver.TCPServer(("", 8000), Handler) as httpd:
-        print("HTTP server running at http://localhost:8000/")
+    with socketserver.TCPServer(("", 3509), Handler) as httpd:
+        print("HTTP server running at http://localhost:3509/")
         httpd.serve_forever()
 
 async def ws_handler(websocket):

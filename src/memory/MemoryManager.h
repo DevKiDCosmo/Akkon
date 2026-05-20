@@ -1,6 +1,6 @@
 #pragma once
 #include "RuntimeDomain.h"
-#include "Arena.h"
+#include "ArenaAllocator.h"
 #include <map>
 #include <memory>
 
@@ -11,13 +11,12 @@ public:
     MemoryManager();
     ~MemoryManager();
 
-    Arena* getDomain(RuntimeDomain domain);
+    ArenaAllocator* getDomain(RuntimeDomain domain);
     void resetDomain(RuntimeDomain domain);
     void printStats() const;
 
 private:
-    std::map<RuntimeDomain, std::unique_ptr<Arena>> m_domains;
+    std::map<RuntimeDomain, std::unique_ptr<ArenaAllocator>> m_domains;
 };
 
 } // namespace memory
-

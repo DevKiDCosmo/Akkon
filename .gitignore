@@ -1,4 +1,3 @@
-db/
 *.db
 cmake-build-debug/
 cmake-build-release/
@@ -7,3 +6,5 @@ cmake-build-minsize/
 
 webview/venv/
 webview/.venv/
+
+*.log

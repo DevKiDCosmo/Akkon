@@ -1,42 +1,61 @@
-// Simple websocket client to connect to Akkon server
+let globalWs = null;
+
 function connect() {
-    let wsPort = window.location.port === "8000" || window.location.port === "5173" ? "8080" : window.location.port;
-    const ws = new WebSocket(`ws://${window.location.hostname}:${wsPort}/ws`);
+    globalWs = new WebSocket(`ws://127.0.0.1:8080/ws`);
     
-    ws.onopen = () => {
-        document.getElementById('server-status').innerText = 'Connected';
-        document.querySelector('.dot').style.backgroundColor = '#10b981';
-        document.querySelector('.dot').style.boxShadow = '0 0 10px #10b981';
+    globalWs.onopen = () => {
+        document.getElementById('server-status').innerText = 'CONNECTED';
+        document.querySelector('.dot').style.backgroundColor = '#fff';
     };
     
-    ws.onmessage = (event) => {
+    globalWs.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            if (data.allocated !== undefined) {
-                document.getElementById('mem-allocated').innerText = `${(data.allocated / 1024 / 1024).toFixed(2)} MB`;
+            if (data.allocated !== undefined) document.getElementById('mem-allocated').innerText = `${(data.allocated / 1024 / 1024).toFixed(2)} MB`;
+            if (data.capacity !== undefined) document.getElementById('mem-capacity').innerText = `${(data.capacity / 1024 / 1024).toFixed(2)} MB`;
+            if (data.total_queries !== undefined) document.getElementById('total-queries').innerText = data.total_queries;
+            if (data.hit_rate !== undefined) document.getElementById('hit-rate').innerText = `${data.hit_rate.toFixed(1)}%`;
+            
+            if (data.action === 'insert_ack') {
+                document.getElementById('ins-status').innerText = 'SUCCESS';
             }
-            if (data.capacity !== undefined) {
-                document.getElementById('mem-capacity').innerText = `${(data.capacity / 1024 / 1024).toFixed(2)} MB`;
+            if (data.action === 'query_ack') {
+                document.getElementById('qry-result').innerText = data.result;
             }
-            if (data.total_queries !== undefined) {
-                document.getElementById('total-queries').innerText = data.total_queries;
-            }
-            if (data.hit_rate !== undefined) {
-                document.getElementById('hit-rate').innerText = `${data.hit_rate.toFixed(1)}%`;
+            if (data.action === 'debug_ack') {
+                document.getElementById('dbg-port').innerText = data.port;
+                document.getElementById('dbg-interface').innerText = data.interface;
             }
         } catch (e) {
             console.error('Failed to parse WS message', e);
         }
     };
     
-    ws.onclose = () => {
-        document.getElementById('server-status').innerText = 'Disconnected';
-        document.querySelector('.dot').style.backgroundColor = '#ef4444';
-        document.querySelector('.dot').style.boxShadow = '0 0 10px #ef4444';
-        
-        // Reconnect after 3 seconds
+    globalWs.onclose = () => {
+        document.getElementById('server-status').innerText = 'DISCONNECTED';
+        document.querySelector('.dot').style.backgroundColor = '#333';
         setTimeout(connect, 3000);
     };
+}
+
+function insertUser() {
+    if (!globalWs || globalWs.readyState !== WebSocket.OPEN) return;
+    const email = document.getElementById('ins-email').value;
+    const pass = document.getElementById('ins-pass').value;
+    globalWs.send(JSON.stringify({action: 'insert', email, pass}));
+    document.getElementById('ins-status').innerText = 'PENDING...';
+}
+
+function queryUser() {
+    if (!globalWs || globalWs.readyState !== WebSocket.OPEN) return;
+    const email = document.getElementById('qry-email').value;
+    globalWs.send(JSON.stringify({action: 'query', email}));
+    document.getElementById('qry-result').innerText = 'PENDING...';
+}
+
+function fetchDebug() {
+    if (!globalWs || globalWs.readyState !== WebSocket.OPEN) return;
+    globalWs.send(JSON.stringify({action: 'debug'}));
 }
 
 connect();
