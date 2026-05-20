@@ -1,0 +1,32 @@
+name: Advanced Security CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  advanced-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Concurrency Tests
+      working-directory: build
+      run: ./test_concurrency || .\Release\test_concurrency.exe
+      
+    - name: Memory Isolation Tests
+      working-directory: build
+      run: ./test_memory_isolation || .\Release\test_memory_isolation.exe
+      
+    - name: Cryptographic Hashing Tests
+      working-directory: build
+      run: ./test_hashing || .\Release\test_hashing.exe
