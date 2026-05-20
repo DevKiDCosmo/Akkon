@@ -5,11 +5,13 @@
 #include <sstream>
 #include <iomanip>
 #include <chrono>
+#include <ctime>
+#include <utility>
 
 namespace construction {
 
-MasterDB::MasterDB(const std::filesystem::path& dbDir)
-    : m_dbDir(dbDir) {
+MasterDB::MasterDB(std::filesystem::path dbDir)
+    : m_dbDir(std::move(dbDir)) {
     ensureOpen();
 }
 
@@ -46,6 +48,13 @@ bool MasterDB::ensureOpen() {
         return false;
     }
 
+    // Backward compatibility: normalize old status labels
+    rc = sqlite3_exec(m_db, "UPDATE databases SET status='unmapped' WHERE status='external';", nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[ERROR] SQL migration error: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+    }
+
     return true;
 }
 
@@ -53,8 +62,9 @@ bool MasterDB::registerDatabase(const DatabaseInfo& info) {
     if (!ensureOpen()) return false;
     char* errMsg = nullptr;
     std::string escapedPath = escapeSqlString(info.filePos);
-    std::string insertSql = "INSERT OR IGNORE INTO databases (uuid, creation_date, file_path) VALUES ('" +
-                            info.uuid + "', '" + info.creationDate + "', '" + escapedPath + "');";
+    std::string insertSql = "INSERT OR IGNORE INTO databases (uuid, creation_date, file_path, status) VALUES ('" +
+                            info.uuid + "', '" + info.creationDate + "', '" + escapedPath + "', '" +
+                            (info.status.empty() ? std::string("active") : info.status) + "');";
     int rc = sqlite3_exec(m_db, insertSql.c_str(), nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         std::cerr << "[ERROR] SQL error registering database: " << errMsg << std::endl;
@@ -68,7 +78,7 @@ std::map<int, DatabaseInfo> MasterDB::loadExisting() {
     std::map<int, DatabaseInfo> databaseMap;
     if (!ensureOpen()) return databaseMap;
     sqlite3_stmt* stmt = nullptr;
-    const char* query = "SELECT id, uuid, creation_date, file_path FROM databases ORDER BY id;";
+    const char* query = "SELECT id, uuid, creation_date, file_path, status FROM databases ORDER BY id;";
     if (sqlite3_prepare_v2(m_db, query, -1, &stmt, nullptr) == SQLITE_OK) {
         int index = 0;
         while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -76,6 +86,7 @@ std::map<int, DatabaseInfo> MasterDB::loadExisting() {
             info.uuid = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
             info.creationDate = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
             info.filePos = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+            info.status = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
             index++;
             databaseMap[index] = info;
         }
@@ -84,7 +95,7 @@ std::map<int, DatabaseInfo> MasterDB::loadExisting() {
     return databaseMap;
 }
 
-std::vector<DatabaseInfo> MasterDB::getMissing(const std::map<int, DatabaseInfo>& existing) {
+std::vector<DatabaseInfo> MasterDB::getMissing(const std::map<int, DatabaseInfo>& existing) const {
     std::vector<DatabaseInfo> missing;
     for (const auto& [idx, info] : existing) {
         if (!std::filesystem::exists(info.filePos)) {
@@ -95,7 +106,7 @@ std::vector<DatabaseInfo> MasterDB::getMissing(const std::map<int, DatabaseInfo>
     return missing;
 }
 
-void MasterDB::recreateMissing(const std::vector<DatabaseInfo>& missing) {
+void MasterDB::recreateMissing(const std::vector<DatabaseInfo>& missing) const {
     for (const auto& info : missing) {
         std::cout << "[INFO] Recreating: " << info.uuid << std::endl;
         std::filesystem::path dbPath = m_dbDir / (info.uuid + ".db");
@@ -123,10 +134,10 @@ void MasterDB::recreateMissing(const std::vector<DatabaseInfo>& missing) {
     }
 }
 
-void MasterDB::scanAndImportExternal() {
+void MasterDB::scanAndImportUnmapped() {
     if (!ensureOpen()) return;
     // Collect existing file paths from master DB
-    std::set<std::string> mappedPaths;
+    std::set<std::string, std::less<>> mappedPaths;
     sqlite3_stmt* stmt = nullptr;
     const char* query = "SELECT file_path FROM databases;";
     if (sqlite3_prepare_v2(m_db, query, -1, &stmt, nullptr) == SQLITE_OK) {
@@ -139,11 +150,11 @@ void MasterDB::scanAndImportExternal() {
 
     for (auto& entry : std::filesystem::directory_iterator(m_dbDir)) {
         if (!entry.is_regular_file()) continue;
-        auto p = entry.path();
+        const auto& p = entry.path();
         if (p.filename() == "master.db") continue;
         if (p.extension() != ".db") continue;
         std::string full = p.string();
-        if (mappedPaths.find(full) != mappedPaths.end()) continue; // already mapped
+        if (mappedPaths.contains(full)) continue; // already mapped
 
         // Try to read metadata from the DB
         DatabaseInfo info;
@@ -168,25 +179,26 @@ void MasterDB::scanAndImportExternal() {
         if (info.uuid.empty()) info.uuid = p.stem().string();
         if (info.creationDate.empty()) {
             auto ftime = std::filesystem::last_write_time(p);
-            // convert filesystem time to system_clock time_point
             auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
                 ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now());
             std::time_t cftime = std::chrono::system_clock::to_time_t(sctp);
+            std::tm tm{};
+            localtime_r(&cftime, &tm);
             std::stringstream ss;
-            ss << std::put_time(std::localtime(&cftime), "%Y-%m-%d %H:%M:%S");
+            ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
             info.creationDate = ss.str();
         }
 
         // Insert into master DB with status 'external'
         char* errMsg = nullptr;
         std::string insert = "INSERT INTO databases (uuid, creation_date, file_path, status) VALUES ('" +
-                             escapeSqlString(info.uuid) + "', '" + escapeSqlString(info.creationDate) + "', '" + escapeSqlString(full) + "', 'external');";
+                             escapeSqlString(info.uuid) + "', '" + escapeSqlString(info.creationDate) + "', '" + escapeSqlString(full) + "', 'unmapped');";
         int rc = sqlite3_exec(m_db, insert.c_str(), nullptr, nullptr, &errMsg);
         if (rc != SQLITE_OK) {
             std::cerr << "[ERROR] Failed to import external DB " << full << ": " << errMsg << std::endl;
             sqlite3_free(errMsg);
         } else {
-            std::cout << "[INFO] Imported external DB: " << full << " as uuid=" << info.uuid << std::endl;
+            std::cout << "[INFO] Imported unmapped DB: " << full << " as uuid=" << info.uuid << std::endl;
         }
     }
 }
@@ -219,6 +231,7 @@ DatabaseInfo MasterDB::createNewDatabase() {
     }
     sqlite3_close(db);
     info.filePos = dbPath.string();
+    info.status = "active";
     registerDatabase(info);
     return info;
 }

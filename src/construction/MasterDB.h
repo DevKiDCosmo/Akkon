@@ -10,18 +10,18 @@ namespace construction {
 
 class MasterDB {
 public:
-    explicit MasterDB(const std::filesystem::path& dbDir);
+    explicit MasterDB(std::filesystem::path dbDir);
     ~MasterDB();
 
-    bool isOpen() const;
+    [[nodiscard]] bool isOpen() const;
     bool ensureOpen();
 
     bool registerDatabase(const DatabaseInfo& info);
     std::map<int, DatabaseInfo> loadExisting();
-    std::vector<DatabaseInfo> getMissing(const std::map<int, DatabaseInfo>& existing);
-    void recreateMissing(const std::vector<DatabaseInfo>& missing);
-    // Scan db directory for .db files not present in master and import them as 'external'
-    void scanAndImportExternal();
+    std::vector<DatabaseInfo> getMissing(const std::map<int, DatabaseInfo>& existing) const;
+    void recreateMissing(const std::vector<DatabaseInfo>& missing) const;
+    // Scan db directory for .db files not present in master and import them as 'unmapped'
+    void scanAndImportUnmapped();
 
     DatabaseInfo createNewDatabase();
 
