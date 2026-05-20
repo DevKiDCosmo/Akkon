@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akkon Server Dashboard</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Akkon Server Dashboard</h1>
+            <div class="status-indicator">
+                <span class="dot online"></span>
+                <span id="server-status">Online</span>
+            </div>
+        </header>
+        
+        <main>
+            <div class="card metrics-card">
+                <h2>Memory Usage</h2>
+                <div class="metric">
+                    <span class="label">Allocated</span>
+                    <span class="value" id="mem-allocated">0 MB</span>
+                </div>
+                <div class="metric">
+                    <span class="label">Capacity</span>
+                    <span class="value" id="mem-capacity">0 MB</span>
+                </div>
+            </div>
+
+            <div class="card queries-card">
+                <h2>Query Engine Stats</h2>
+                <div class="metric">
+                    <span class="label">Total Queries</span>
+                    <span class="value" id="total-queries">0</span>
+                </div>
+                <div class="metric">
+                    <span class="label">Hit Rate</span>
+                    <span class="value" id="hit-rate">0%</span>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/js/app.js"></script>
+</body>
+</html>

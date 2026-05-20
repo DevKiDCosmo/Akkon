@@ -5,3 +5,5 @@ cmake-build-release/
 cmake-build-relwithdebinfo/
 cmake-build-minsize/
 
+webview/venv/
+webview/.venv/
