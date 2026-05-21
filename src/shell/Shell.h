@@ -13,7 +13,8 @@ private:
     bool m_debug = false;
 
     static void printUsage();
-    void registerAllArguments();
+
+    static void registerAllArguments();
 };
 
 } // namespace shell
