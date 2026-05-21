@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <filesystem>
+#include <mutex>
 #include "sqlite3.h"
 
 namespace construction {
@@ -25,9 +26,13 @@ public:
 
     DatabaseInfo createNewDatabase();
 
+    bool insertMetrics(const std::string& timestamp, size_t ram_allocated, size_t ram_runtime, size_t ram_request, size_t ram_capacity, uint64_t disk_space, int reliability, size_t total_queries);
+    size_t getLastTotalQueries();
+
 private:
     std::filesystem::path m_dbDir;
     sqlite3* m_db = nullptr;
+    mutable std::recursive_mutex m_mutex;
 };
 
 } // namespace construction

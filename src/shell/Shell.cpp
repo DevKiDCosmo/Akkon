@@ -12,10 +12,11 @@ using memory::RuntimeDomain;
 namespace shell {
 
 void Shell::printUsage() {
-    std::cout << "Usage: Akkon [-c N] [--no-import] [--debug] [--help]\n"
+    std::cout << "Usage: Akkon [-c N] [--no-import] [--debug] [--help] [-p port]\n"
               << "  -c N         Create or require N mapped databases\n"
               << "  --no-import  Skip importing unmapped .db files from db/\n"
               << "  --debug      Enable debug mode (warn on unregistered args)\n"
+              << "  -p, --port   Server port to listen on (default 2409)\n"
               << "  --help       Show this message\n";
 }
 
@@ -25,6 +26,8 @@ void Shell::registerAllArguments() {
     reg.registerArgument({"-c", true, "integer", "Number of databases", RuntimeDomain::RUNTIME});
     reg.registerArgument({"--no-import", false, "flag", "Skip importing unmapped DBs", RuntimeDomain::RUNTIME});
     reg.registerArgument({"--debug", false, "flag", "Enable debug mode", RuntimeDomain::RUNTIME});
+    reg.registerArgument({"--port", true, "integer", "Server port", RuntimeDomain::RUNTIME});
+    reg.registerArgument({"-p", true, "integer", "Server port", RuntimeDomain::RUNTIME});
 }
 
 int Shell::run(int argc, char* argv[]) {
@@ -68,6 +71,8 @@ int Shell::run(int argc, char* argv[]) {
             noImport = true;
         } else if (arg == "--debug") {
             m_debug = true;
+        } else if ((arg == "-p" || arg == "--port") && i + 1 < parseResult.parsed_args.size()) {
+            i++; // skip value
         }
     }
 

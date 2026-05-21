@@ -7,14 +7,19 @@
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
+#include <thread>
+#include <cerrno>
+
+#ifndef _WIN32
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
-#include <thread>
 #include <fcntl.h>
-#include <cerrno>
+#else
+#include <windows.h>
+#endif
 
 namespace testsuite {
 
@@ -43,13 +48,18 @@ std::string TestFramework::getBinaryPath() const {
         return env_binary;
     }
 
+    std::string bin_name = "Akkon";
+#ifdef _WIN32
+    bin_name = "Akkon.exe";
+#endif
+
     // Try to find the Akkon binary in common build directories
     std::vector<std::string> possible_paths = {
-        "./Akkon",
-        "./cmake-build-debug/Akkon",
-        "../cmake-build-debug/Akkon",
-        "../../cmake-build-debug/Akkon",
-        "../../../cmake-build-debug/Akkon"
+        "./" + bin_name,
+        "./cmake-build-debug/" + bin_name,
+        "../cmake-build-debug/" + bin_name,
+        "../../cmake-build-debug/" + bin_name,
+        "../../../cmake-build-debug/" + bin_name
     };
 
     for (const auto& path : possible_paths) {
@@ -59,7 +69,7 @@ std::string TestFramework::getBinaryPath() const {
     }
 
     // Last resort: assume it's in PATH
-    return "Akkon";
+    return bin_name;
 }
 
 std::string TestFramework::createInstance(const std::vector<std::string>& args, const std::string& log_dir) {
@@ -106,6 +116,74 @@ bool TestFramework::startProcess(const std::string& tracker_id, const std::vecto
 
     InstanceInfo& info = it->second;
 
+#ifdef _WIN32
+    // Windows process startup
+    std::string cmd = "\"" + info.binary_path + "\"";
+    for (const auto& arg : args) {
+        cmd += " \"" + arg + "\"";
+    }
+
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof(sa);
+    sa.lpSecurityDescriptor = NULL;
+    sa.bInheritHandle = TRUE;
+
+    HANDLE hLog = CreateFileA(
+        info.log_file.c_str(),
+        FILE_APPEND_DATA,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        &sa,
+        OPEN_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hLog == INVALID_HANDLE_VALUE) {
+        std::cerr << "[TestFramework] Windows CreateFileA failed for log file: " << GetLastError() << std::endl;
+        return false;
+    }
+
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    si.dwFlags |= STARTF_USESTDHANDLES;
+    si.hStdOutput = hLog;
+    si.hStdError = hLog;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+
+    ZeroMemory(&pi, sizeof(pi));
+
+    BOOL success = CreateProcessA(
+        NULL,
+        const_cast<char*>(cmd.c_str()),
+        NULL,
+        NULL,
+        TRUE, // Inherit handles (crucial for redirecting stdout/stderr)
+        0,
+        NULL,
+        NULL,
+        &si,
+        &pi
+    );
+
+    CloseHandle(hLog);
+
+    if (!success) {
+        std::cerr << "[TestFramework] Windows CreateProcessA failed: " << GetLastError() << std::endl;
+        return false;
+    }
+
+    info.pid = static_cast<std::int32_t>(pi.dwProcessId);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+
+    std::ofstream log_append(info.log_file, std::ios::app);
+    log_append << "[" << tracker_id << "] Process started on Windows with PID " << info.pid << std::endl;
+    log_append.flush();
+
+    return true;
+#else
     // Open log file
     std::ofstream log_file(info.log_file, std::ios::app);
     if (!log_file.is_open()) {
@@ -172,6 +250,7 @@ bool TestFramework::startProcess(const std::string& tracker_id, const std::vecto
     }
 
     return true;
+#endif
 }
 
 InstanceInfo TestFramework::getTracking(const std::string& tracker_id) const {
@@ -210,6 +289,23 @@ InstanceStatus TestFramework::getStatus(const std::string& tracker_id) const {
 
     // Check if process is still running
     if (info.pid != -1) {
+#ifdef _WIN32
+        HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | SYNCHRONIZE, FALSE, info.pid);
+        if (hProcess == NULL) {
+            status.status = "stopped";
+            const_cast<TestFramework*>(this)->m_instances[tracker_id].status = "stopped";
+        } else {
+            DWORD exitCode = 0;
+            if (GetExitCodeProcess(hProcess, &exitCode)) {
+                if (exitCode != STILL_ACTIVE) {
+                    status.exit_code = static_cast<std::int32_t>(exitCode);
+                    status.status = "stopped";
+                    const_cast<TestFramework*>(this)->m_instances[tracker_id].status = "stopped";
+                }
+            }
+            CloseHandle(hProcess);
+        }
+#else
         int wstatus = 0;
         pid_t result = waitpid(info.pid, &wstatus, WNOHANG);
         if (result == info.pid) {
@@ -224,6 +320,7 @@ InstanceStatus TestFramework::getStatus(const std::string& tracker_id) const {
             status.status = "stopped";
             const_cast<TestFramework*>(this)->m_instances[tracker_id].status = "stopped";
         }
+#endif
     }
 
     return status;
@@ -274,6 +371,23 @@ bool TestFramework::stopInstance(const std::string& tracker_id) {
     }
 
     int pid = it->second.pid;
+#ifdef _WIN32
+    HANDLE hProcess = OpenProcess(PROCESS_TERMINATE | PROCESS_QUERY_INFORMATION | SYNCHRONIZE, FALSE, pid);
+    if (hProcess == NULL) {
+        it->second.status = "stopped";
+        return true;
+    }
+
+    if (!TerminateProcess(hProcess, 0)) {
+        CloseHandle(hProcess);
+        return false;
+    }
+
+    WaitForSingleObject(hProcess, 2000);
+    CloseHandle(hProcess);
+    it->second.status = "stopped";
+    return true;
+#else
     int wstatus = 0;
     if (waitpid(pid, &wstatus, WNOHANG) == pid) {
         it->second.status = "stopped";
@@ -300,6 +414,7 @@ bool TestFramework::stopInstance(const std::string& tracker_id) {
     }
 
     return false;
+#endif
 }
 
 bool TestFramework::killInstance(const std::string& tracker_id) {
@@ -309,10 +424,19 @@ bool TestFramework::killInstance(const std::string& tracker_id) {
     }
 
     int pid = it->second.pid;
+#ifdef _WIN32
+    HANDLE hProcess = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pid);
+    if (hProcess != NULL) {
+        TerminateProcess(hProcess, 1);
+        WaitForSingleObject(hProcess, INFINITE);
+        CloseHandle(hProcess);
+    }
+#else
     kill(pid, SIGKILL);
     
     int wstatus = 0;
     waitpid(pid, &wstatus, 0); // reap the zombie synchronously
+#endif
 
     it->second.status = "stopped";
     return true;
@@ -363,6 +487,160 @@ void TestFramework::cleanup() {
         }
     }
     m_instances.clear();
+}
+
+bool TestFramework::isContainerized() const {
+    // Check for common containerization indicators
+#ifndef _WIN32
+    // Check for .dockerenv file
+    if (std::filesystem::exists("/.dockerenv")) {
+        return true;
+    }
+
+    // Check for cgroup v1
+    std::ifstream cgroup1("/proc/self/cgroup");
+    if (cgroup1.is_open()) {
+        std::string line;
+        while (std::getline(cgroup1, line)) {
+            if (line.find("/docker") != std::string::npos ||
+                line.find("/podman") != std::string::npos ||
+                line.find("/lxc") != std::string::npos ||
+                line.find("/kubepods") != std::string::npos) {
+                return true;
+            }
+        }
+    }
+
+    // Check for cgroup v2
+    std::ifstream cgroup2("/proc/self/cgroup");
+    if (cgroup2.is_open()) {
+        std::string line;
+        while (std::getline(cgroup2, line)) {
+            if (line.find("docker") != std::string::npos ||
+                line.find("podman") != std::string::npos ||
+                line.find("lxc") != std::string::npos ||
+                line.find("kubepods") != std::string::npos) {
+                return true;
+            }
+        }
+    }
+#endif
+    return false;
+}
+
+std::string TestFramework::detectContainerEngine() const {
+    // Try to detect which container engine is available/in use
+#ifndef _WIN32
+    // Check for Docker
+    if (std::filesystem::exists("/var/run/docker.sock") ||
+        std::getenv("DOCKER_HOST") != nullptr) {
+        return "docker";
+    }
+
+    // Check for Podman
+    if (std::filesystem::exists("/var/run/podman/podman.sock") ||
+        std::getenv("PODMAN_HOST") != nullptr) {
+        return "podman";
+    }
+
+    // Check for containerd
+    if (std::filesystem::exists("/var/run/containerd/containerd.sock")) {
+        return "containerd";
+    }
+
+    // Check for LXC
+    if (std::filesystem::exists("/var/lib/lxc") ||
+        std::filesystem::exists("/var/snap/lxd/common/lxd")) {
+        return "lxc";
+    }
+#endif
+    return "none";
+}
+
+void TestFramework::setupEnvironment(std::map<std::string, std::string>& env) const {
+    // Set up environment based on container status and engine
+
+    // Detect if we're in a container
+    bool in_container = isContainerized();
+    if (in_container) {
+        env["AKKON_IN_CONTAINER"] = "1";
+        std::string engine = detectContainerEngine();
+        if (!engine.empty() && engine != "none") {
+            env["AKKON_CONTAINER_ENGINE"] = engine;
+        }
+    }
+
+    // Set standard test environment variables
+    if (env.find("AKKON_BINARY") == env.end()) {
+        env["AKKON_BINARY"] = getBinaryPath();
+    }
+
+    // Add test-specific environment
+    env["AKKON_TEST_MODE"] = "1";
+
+    // If not already set, add current working directory context
+    if (env.find("AKKON_CWD") == env.end()) {
+        env["AKKON_CWD"] = std::filesystem::current_path().string();
+    }
+}
+
+std::int32_t TestFramework::runtime(const std::vector<std::string>& args,
+                                     const std::map<std::string, std::string>& env) {
+    // All-in-one runtime: setup, run, cleanup with automatic environment management
+
+    // Setup environment with provided variables and detected settings
+    std::map<std::string, std::string> runtime_env = env;
+    setupEnvironment(runtime_env);
+
+    // Apply environment variables to current process (for child process inheritance)
+    for (const auto& [key, value] : runtime_env) {
+        setenv(key.c_str(), value.c_str(), 1);
+    }
+
+    // Create instance with args
+    std::string tracker_id = createInstance(args, "test_logs");
+    if (tracker_id.empty()) {
+        std::cerr << "[TestFramework::runtime] Failed to create instance" << std::endl;
+        return -1;
+    }
+
+    std::cerr << "[TestFramework::runtime] Instance created with ID: " << tracker_id << std::endl;
+
+    // Log environment information
+    if (isContainerized()) {
+        std::cerr << "[TestFramework::runtime] Running in containerized environment" << std::endl;
+        std::cerr << "[TestFramework::runtime] Container engine: " << detectContainerEngine() << std::endl;
+    } else {
+        std::cerr << "[TestFramework::runtime] Running in native environment" << std::endl;
+    }
+
+    // Wait for instance to complete (default 5 minute timeout)
+    const std::int32_t TIMEOUT_MS = 300000; // 5 minutes
+    bool completed = waitForInstance(tracker_id, TIMEOUT_MS);
+
+    if (!completed) {
+        std::cerr << "[TestFramework::runtime] Instance timeout after " << TIMEOUT_MS << "ms" << std::endl;
+        killInstance(tracker_id);
+        return -1;
+    }
+
+    // Get exit code
+    std::int32_t exit_code = getExitCode(tracker_id);
+
+    // Log final status
+    auto logs = getLogs(tracker_id, 5);
+    std::cerr << "[TestFramework::runtime] Instance completed with exit code: " << exit_code << std::endl;
+    if (!logs.empty()) {
+        std::cerr << "[TestFramework::runtime] Last log entries:" << std::endl;
+        for (const auto& line : logs) {
+            std::cerr << "  " << line << std::endl;
+        }
+    }
+
+    // Cleanup the instance
+    stopInstance(tracker_id);
+
+    return exit_code;
 }
 
 } // namespace testsuite

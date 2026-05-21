@@ -37,11 +37,31 @@
 
                     <div class="metric-group">
                         <div class="metric-header">
-                            <span class="label">Memory (Arena RAM)</span>
+                            <span class="label">Total Memory</span>
                             <span class="value"><span id="ram-allocated">0.00</span> / <span id="ram-capacity">0.00</span> MB</span>
                         </div>
                         <div class="progress-bar-container">
-                            <div class="progress-bar" id="ram-bar" style="width: 0%; background: var(--accent-purple);"></div>
+                            <div class="progress-bar" id="ram-bar" style="width: 0%; background: #000000;"></div>
+                        </div>
+                    </div>
+
+                    <div class="metric-group">
+                        <div class="metric-header">
+                            <span class="label">Runtime Memory</span>
+                            <span class="value"><span id="ram-runtime">0.00</span> MB</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="ram-runtime-bar" style="width: 0%; background: #555555;"></div>
+                        </div>
+                    </div>
+
+                    <div class="metric-group">
+                        <div class="metric-header">
+                            <span class="label">Request Memory</span>
+                            <span class="value"><span id="ram-request">0.00</span> MB</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="ram-request-bar" style="width: 0%; background: #888888;"></div>
                         </div>
                     </div>
 
@@ -51,7 +71,7 @@
                             <span class="value" id="sys-disk">0.00 MB</span>
                         </div>
                         <div class="progress-bar-container">
-                            <div class="progress-bar" id="disk-bar" style="width: 100%; background: var(--accent-cyan);"></div>
+                            <div class="progress-bar" id="disk-bar" style="width: 100%; background: #222222;"></div>
                         </div>
                     </div>
 
@@ -74,6 +94,22 @@
                         <span class="value" id="dbg-interface">0.0.0.0</span>
                     </div>
                     <button class="btn btn-secondary" onclick="fetchDebug()">Refresh Status</button>
+                </div>
+
+                <div class="card stress-card">
+                    <h2>Stress Test Console</h2>
+                    <div class="simple-metric">
+                        <span class="label">Flood Status</span>
+                        <span class="value status-badge error" id="stress-status" style="border: 2px solid #000000; background: #ffffff; color: #000000;">STOPPED</span>
+                    </div>
+                    <div class="metric-group" style="margin-top: 15px;">
+                        <div class="metric-header">
+                            <span class="label">Target Rate</span>
+                            <span class="value" id="stress-rate-val">50 QPS</span>
+                        </div>
+                        <input type="range" id="stress-rate" min="5" max="10000" value="50" step="5" style="width: 100%; height: 6px; appearance: none; background: #e2e8f0; outline: none; border: 2px solid #000000; box-sizing: border-box;" oninput="document.getElementById('stress-rate-val').innerText = this.value + ' QPS';">
+                    </div>
+                    <button class="btn btn-primary" id="btn-stress" onclick="toggleStressTest()">Start Flood</button>
                 </div>
             </aside>
 
@@ -109,6 +145,11 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="card chart-card">
+                    <h2>Live Performance Analytics</h2>
+                    <canvas id="performance-chart" style="width: 100%; height: 180px; display: block; border: 2px solid #000000; box-sizing: border-box;"></canvas>
                 </div>
 
                 <div class="card console-card">

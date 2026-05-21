@@ -174,4 +174,79 @@ std::string WebSocketHandler::decodeFrame(const std::string& frame) {
     return decoded;
 }
 
+std::vector<std::string> WebSocketHandler::decodeFrames(const std::string& buffer) {
+    std::vector<std::string> payloads;
+    size_t bytes_left = buffer.size();
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer.data());
+    size_t index = 0;
+
+    while (bytes_left >= 2) {
+        uint8_t first_byte = data[index];
+        uint8_t second_byte = data[index + 1];
+        bool fin = (first_byte & 0x80) != 0;
+        uint8_t opcode = first_byte & 0x0F;
+        
+        bool masked = (second_byte & 0x80) != 0;
+        uint64_t payload_len = second_byte & 0x7F;
+        
+        size_t header_len = 2;
+        if (payload_len == 126) {
+            header_len = 4;
+        } else if (payload_len == 127) {
+            header_len = 10;
+        }
+        
+        if (masked) {
+            header_len += 4;
+        }
+        
+        if (bytes_left < header_len) {
+            break; // Incomplete header
+        }
+        
+        size_t len_offset = 2;
+        if (payload_len == 126) {
+            payload_len = (data[index + 2] << 8) | data[index + 3];
+            len_offset = 4;
+        } else if (payload_len == 127) {
+            payload_len = 0;
+            for (int i = 0; i < 8; ++i) {
+                payload_len = (payload_len << 8) | data[index + 2 + i];
+            }
+            len_offset = 10;
+        }
+        
+        uint8_t mask[4] = {0};
+        if (masked) {
+            mask[0] = data[index + len_offset];
+            mask[1] = data[index + len_offset + 1];
+            mask[2] = data[index + len_offset + 2];
+            mask[3] = data[index + len_offset + 3];
+        }
+        
+        if (bytes_left < header_len + payload_len) {
+            break; // Incomplete frame payload
+        }
+        
+        std::string payload(payload_len, '\0');
+        const uint8_t* payload_src = data + index + header_len;
+        for (size_t i = 0; i < payload_len; ++i) {
+            if (masked) {
+                payload[i] = static_cast<char>(payload_src[i] ^ mask[i % 4]);
+            } else {
+                payload[i] = static_cast<char>(payload_src[i]);
+            }
+        }
+        
+        if (opcode == 1 || opcode == 2) {
+            payloads.push_back(std::move(payload));
+        }
+        
+        size_t frame_size = header_len + payload_len;
+        index += frame_size;
+        bytes_left -= frame_size;
+    }
+    return payloads;
+}
+
 } // namespace network

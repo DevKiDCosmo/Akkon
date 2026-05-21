@@ -10,6 +10,7 @@ import random
 def start_http_server():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     Handler = http.server.SimpleHTTPRequestHandler
+    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", 3509), Handler) as httpd:
         print("HTTP server running at http://localhost:3509/")
         httpd.serve_forever()

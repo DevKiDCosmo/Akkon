@@ -19,9 +19,13 @@ MasterDB::~MasterDB() {
     if (m_db) sqlite3_close(m_db);
 }
 
-bool MasterDB::isOpen() const { return m_db != nullptr; }
+bool MasterDB::isOpen() const {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    return m_db != nullptr;
+}
 
 bool MasterDB::ensureOpen() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     if (m_db) return true;
     std::filesystem::path path = m_dbDir / "master.db";
     int rc = sqlite3_open(path.c_str(), &m_db);
@@ -31,6 +35,9 @@ bool MasterDB::ensureOpen() {
         m_db = nullptr;
         return false;
     }
+
+    sqlite3_exec(m_db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
+    sqlite3_exec(m_db, "PRAGMA synchronous=NORMAL;", nullptr, nullptr, nullptr);
 
     char* errMsg = nullptr;
     const char* sql = "CREATE TABLE IF NOT EXISTS databases ("
@@ -48,6 +55,26 @@ bool MasterDB::ensureOpen() {
         return false;
     }
 
+    const char* sqlMetrics = "CREATE TABLE IF NOT EXISTS metrics ("
+                             "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                             "timestamp TEXT NOT NULL,"
+                             "ram_allocated INTEGER NOT NULL,"
+                             "ram_runtime INTEGER NOT NULL,"
+                             "ram_request INTEGER NOT NULL,"
+                             "ram_capacity INTEGER NOT NULL,"
+                             "disk_space INTEGER NOT NULL,"
+                             "reliability INTEGER NOT NULL,"
+                             "total_queries INTEGER NOT NULL"
+                             ");";
+    rc = sqlite3_exec(m_db, sqlMetrics, nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[ERROR] SQL error creating metrics table: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+        sqlite3_close(m_db);
+        m_db = nullptr;
+        return false;
+    }
+
     // Backward compatibility: normalize old status labels
     rc = sqlite3_exec(m_db, "UPDATE databases SET status='unmapped' WHERE status='external';", nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
@@ -59,6 +86,7 @@ bool MasterDB::ensureOpen() {
 }
 
 bool MasterDB::registerDatabase(const DatabaseInfo& info) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     if (!ensureOpen()) return false;
     char* errMsg = nullptr;
     std::string escapedPath = escapeSqlString(info.filePos);
@@ -75,6 +103,7 @@ bool MasterDB::registerDatabase(const DatabaseInfo& info) {
 }
 
 std::map<int, DatabaseInfo> MasterDB::loadExisting() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::map<int, DatabaseInfo> databaseMap;
     if (!ensureOpen()) return databaseMap;
     sqlite3_stmt* stmt = nullptr;
@@ -96,6 +125,7 @@ std::map<int, DatabaseInfo> MasterDB::loadExisting() {
 }
 
 std::vector<DatabaseInfo> MasterDB::getMissing(const std::map<int, DatabaseInfo>& existing) const {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<DatabaseInfo> missing;
     for (const auto& [idx, info] : existing) {
         if (!std::filesystem::exists(info.filePos)) {
@@ -107,6 +137,7 @@ std::vector<DatabaseInfo> MasterDB::getMissing(const std::map<int, DatabaseInfo>
 }
 
 void MasterDB::recreateMissing(const std::vector<DatabaseInfo>& missing) const {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     for (const auto& info : missing) {
         std::cout << "[INFO] Recreating: " << info.uuid << std::endl;
         std::filesystem::path dbPath = m_dbDir / (info.uuid + ".db");
@@ -140,6 +171,7 @@ void MasterDB::recreateMissing(const std::vector<DatabaseInfo>& missing) const {
 }
 
 void MasterDB::scanAndImportUnmapped() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     if (!ensureOpen()) return;
     // Collect existing file paths from master DB
     std::set<std::string, std::less<>> mappedPaths;
@@ -209,6 +241,7 @@ void MasterDB::scanAndImportUnmapped() {
 }
 
 DatabaseInfo MasterDB::createNewDatabase() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     DatabaseInfo info;
     info.uuid = generateUUID();
     info.creationDate = getCurrentTimestamp();
@@ -248,6 +281,45 @@ DatabaseInfo MasterDB::createNewDatabase() {
 }
 
 
+
+bool MasterDB::insertMetrics(const std::string& timestamp, size_t ram_allocated, size_t ram_runtime, size_t ram_request, size_t ram_capacity, uint64_t disk_space, int reliability, size_t total_queries) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (!ensureOpen()) return false;
+    
+    char* errMsg = nullptr;
+    std::string sql = "INSERT INTO metrics (timestamp, ram_allocated, ram_runtime, ram_request, ram_capacity, disk_space, reliability, total_queries) VALUES ('"
+        + escapeSqlString(timestamp) + "', "
+        + std::to_string(ram_allocated) + ", "
+        + std::to_string(ram_runtime) + ", "
+        + std::to_string(ram_request) + ", "
+        + std::to_string(ram_capacity) + ", "
+        + std::to_string(disk_space) + ", "
+        + std::to_string(reliability) + ", "
+        + std::to_string(total_queries) + ");";
+        
+    int rc = sqlite3_exec(m_db, sql.c_str(), nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "[ERROR] SQL error inserting metrics: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+        return false;
+    }
+    return true;
+}
+
+size_t MasterDB::getLastTotalQueries() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (!ensureOpen()) return 0;
+    sqlite3_stmt* stmt = nullptr;
+    const char* query = "SELECT total_queries FROM metrics ORDER BY id DESC LIMIT 1;";
+    size_t last_total = 0;
+    if (sqlite3_prepare_v2(m_db, query, -1, &stmt, nullptr) == SQLITE_OK) {
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            last_total = static_cast<size_t>(sqlite3_column_int64(stmt, 0));
+        }
+    }
+    sqlite3_finalize(stmt);
+    return last_total;
+}
 
 } // namespace construction
 

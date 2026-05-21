@@ -19,15 +19,24 @@ public:
     void* allocate(std::size_t size);
     void reset(); // O(1) trivial reset, does not deallocate
 
+    void verify() const;
+    void check_access(const void* ptr, std::size_t size) const;
+
     std::size_t allocated() const { return m_used; }
     std::size_t capacity() const { return m_capacity; }
     std::size_t allocation_count() const { return m_alloc_count; }
 
 private:
+    struct AllocInfo {
+        std::size_t offset; // offset of user data block from start of m_buffer
+        std::size_t size;   // size of user data block
+    };
+
     std::vector<char> m_buffer;
     std::size_t m_capacity = 0;
     std::size_t m_used = 0;
     std::size_t m_alloc_count = 0;
+    std::vector<AllocInfo> m_allocs;
 };
 
 } // namespace memory
@@ -37,3 +46,5 @@ void* operator new(std::size_t size, memory::ArenaAllocator& arena);
 void* operator new[](std::size_t size, memory::ArenaAllocator& arena);
 void operator delete(void* ptr, memory::ArenaAllocator& arena) noexcept;
 void operator delete[](void* ptr, memory::ArenaAllocator& arena) noexcept;
+
+#include "ArenaAllocatorSTL.h"

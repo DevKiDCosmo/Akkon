@@ -22,6 +22,13 @@ namespace monitor {
 
 int SystemMonitor::s_write_fd = -1;
 bool SystemMonitor::s_debug_mode = false;
+SystemMonitor::LogCallback SystemMonitor::s_callback = nullptr;
+std::mutex SystemMonitor::s_callback_mutex;
+
+void SystemMonitor::setLogCallback(LogCallback callback) {
+    std::lock_guard<std::mutex> lock(s_callback_mutex);
+    s_callback = callback;
+}
 
 void SystemMonitor::setDebugMode(bool debug_mode) {
     s_debug_mode = debug_mode;
@@ -92,15 +99,15 @@ bool SystemMonitor::init(bool debug_mode) {
 #endif
 }
 
-void SystemMonitor::log(LogLevel level, const std::string& message) {
+void SystemMonitor::log(LogLevel level, const std::string& message, const std::string& tracker_id) {
     if (!s_debug_mode && level != LogLevel::ERROR) return;
 
     std::string level_str;
     switch (level) {
-        case LogLevel::INFO: level_str = "[INFO] "; break;
-        case LogLevel::WARNING: level_str = "[WARNING] "; break;
-        case LogLevel::ERROR: level_str = "[ERROR] "; break;
-        case LogLevel::DEBUG: level_str = "[DEBUG] "; break;
+        case LogLevel::INFO: level_str = "INFO"; break;
+        case LogLevel::WARNING: level_str = "WARNING"; break;
+        case LogLevel::ERROR: level_str = "ERROR"; break;
+        case LogLevel::DEBUG: level_str = "DEBUG"; break;
     }
     
     auto now = std::chrono::system_clock::now();
@@ -115,13 +122,21 @@ void SystemMonitor::log(LogLevel level, const std::string& message) {
 #endif
     time_buf[24] = '\0'; // remove newline
     
-    ss << time_buf << " " << level_str << message << "\n";
+    ss << "[" << time_buf << "] [" << level_str << "] [" << tracker_id << "] " << message << "\n";
     std::string formatted = ss.str();
 
     if (s_write_fd != -1) {
         io_write(s_write_fd, formatted.c_str(), formatted.size());
     } else {
         std::cout << formatted;
+        std::cout.flush();
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(s_callback_mutex);
+        if (s_callback) {
+            s_callback(level, formatted);
+        }
     }
 }
 

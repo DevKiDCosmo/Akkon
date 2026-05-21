@@ -8,3 +8,4 @@ webview/venv/
 webview/.venv/
 
 *.log
+secret/

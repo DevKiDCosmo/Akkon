@@ -2,8 +2,10 @@
 
 namespace indexer {
 
-QueryEngine::QueryEngine(std::size_t expected_items)
-    : m_filter(expected_items * 10, 7) {}
+QueryEngine::QueryEngine(std::size_t expected_items, memory::ArenaAllocator* arena)
+    : m_filter(expected_items * 10, 7, arena),
+      m_exact_store(100, std::hash<std::string>(), std::equal_to<std::string>(), memory::ArenaAllocatorSTL<std::string>(arena)),
+      m_arena(arena) {}
 
 void QueryEngine::insert(const std::string& item) {
     m_filter.add(item);

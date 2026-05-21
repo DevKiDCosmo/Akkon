@@ -18,7 +18,7 @@ public:
     ~DataStorage();
 
     void initialize(const std::map<int, DatabaseInfo>& mapped_dbs);
-    bool insertEntity(const db::DbEntity& entity);
+    bool insertEntity(const db::DbEntity& entity, const std::string& tracker_id = "SYSTEM");
     void loadAllIdentifiers(indexer::QueryEngine& query_engine);
 
 private:

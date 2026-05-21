@@ -74,11 +74,21 @@ public:
     /// Cleanup all instances and logs (for teardown)
     void cleanup();
 
+    /// All-in-one runtime: creates, runs, and cleans up an instance
+    /// Takes args and optional environment variables, detects containerization,
+    /// manages the full instance lifecycle, and returns exit code
+    /// Returns exit code on success, negative value on error
+    std::int32_t runtime(const std::vector<std::string>& args,
+                         const std::map<std::string, std::string>& env = {});
+
 private:
     std::map<std::string, InstanceInfo> m_instances;
     std::string generateTrackerId() const;
     std::string getBinaryPath() const;
     bool startProcess(const std::string& tracker_id, const std::vector<std::string>& args);
+    bool isContainerized() const;
+    std::string detectContainerEngine() const;
+    void setupEnvironment(std::map<std::string, std::string>& env) const;
 };
 
 } // namespace testsuite

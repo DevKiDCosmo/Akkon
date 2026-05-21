@@ -4,6 +4,8 @@
 #include <cassert>
 
 int main() {
+    // TODO: Embedded port etc. in a global define file. That is wrong here.
+
     network::Server server(8081);
     
     std::thread server_thread([&server]() {

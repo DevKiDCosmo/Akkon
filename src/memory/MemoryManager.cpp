@@ -1,14 +1,15 @@
 #include "MemoryManager.h"
+#include "../Defines.h"
 #include <iostream>
 
 namespace memory {
 
 MemoryManager::MemoryManager() {
-    m_domains[RuntimeDomain::RUNTIME]      = std::make_unique<ArenaAllocator>(10 * 1024 * 1024); // 10 MB
-    m_domains[RuntimeDomain::REQUEST]      = std::make_unique<ArenaAllocator>(5 * 1024 * 1024);  // 5 MB
-    m_domains[RuntimeDomain::RESERVED]     = std::make_unique<ArenaAllocator>(1 * 1024 * 1024);  // 1 MB
-    m_domains[RuntimeDomain::VERIFICATION] = std::make_unique<ArenaAllocator>(2 * 1024 * 1024);  // 2 MB
-    m_domains[RuntimeDomain::LIFECYCLE]    = std::make_unique<ArenaAllocator>(2 * 1024 * 1024);  // 2 MB
+    m_domains[RuntimeDomain::RUNTIME]      = std::make_unique<ArenaAllocator>(akkon::RUNTIME_MEMORY_CAPACITY);
+    m_domains[RuntimeDomain::REQUEST]      = std::make_unique<ArenaAllocator>(akkon::REQUEST_MEMORY_CAPACITY);
+    m_domains[RuntimeDomain::RESERVED]     = std::make_unique<ArenaAllocator>(akkon::RESERVED_MEMORY_CAPACITY);
+    m_domains[RuntimeDomain::VERIFICATION] = std::make_unique<ArenaAllocator>(akkon::VERIFICATION_MEMORY_CAPACITY);
+    m_domains[RuntimeDomain::LIFECYCLE]    = std::make_unique<ArenaAllocator>(akkon::LIFECYCLE_MEMORY_CAPACITY);
 }
 
 MemoryManager::~MemoryManager() = default;

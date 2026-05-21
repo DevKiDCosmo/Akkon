@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <functional>
+#include <mutex>
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -18,8 +20,11 @@ enum class LogLevel {
 
 class SystemMonitor {
 public:
+    using LogCallback = std::function<void(LogLevel, const std::string&)>;
+    static void setLogCallback(LogCallback callback);
+
     static bool init(bool debug_mode = false);
-    static void log(LogLevel level, const std::string& message);
+    static void log(LogLevel level, const std::string& message, const std::string& tracker_id = "SYSTEM");
     static void setDebugMode(bool debug_mode);
     static bool isDebugMode() { return s_debug_mode; }
     
@@ -32,6 +37,9 @@ public:
 private:
     static int s_write_fd;
     static bool s_debug_mode;
+    static LogCallback s_callback;
+    static std::mutex s_callback_mutex;
 };
 
 } // namespace monitor
+

@@ -3,8 +3,8 @@
 
 namespace indexer {
 
-BloomFilter::BloomFilter(std::size_t size_in_bits, uint8_t num_hash_functions)
-    : m_bits(size_in_bits, false), m_num_hashes(num_hash_functions) {}
+BloomFilter::BloomFilter(std::size_t size_in_bits, uint8_t num_hash_functions, memory::ArenaAllocator* arena)
+    : m_bits(size_in_bits, false, memory::ArenaAllocatorSTL<bool>(arena)), m_num_hashes(num_hash_functions), m_arena(arena) {}
 
 std::vector<std::size_t> BloomFilter::hash(const std::string& item) const {
     std::vector<std::size_t> hashes;

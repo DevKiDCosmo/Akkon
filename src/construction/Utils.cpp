@@ -49,5 +49,15 @@ std::filesystem::path ensureDbDirectory() {
     return dbDir;
 }
 
+std::string normalizePath(const std::string& pathStr) {
+    std::string result = pathStr;
+    for (char& c : result) {
+        if (c == '\\') {
+            c = '/';
+        }
+    }
+    return std::filesystem::path(result).lexically_normal().generic_string();
+}
+
 } // namespace construction
 

@@ -30,11 +30,11 @@ target_include_directories(Akkon PRIVATE sqlite/ src/)
 target_compile_options(Akkon PRIVATE -pthread)
 
 enable_testing()
-add_executable(test_arena_allocator tests/test_arena_allocator.cpp src/memory/ArenaAllocator.cpp)
+add_executable(test_arena_allocator tests/test_arena_allocator.cpp src/memory/ArenaAllocator.cpp src/security/LifecycleManager.cpp src/monitor/SystemMonitor.cpp)
 target_include_directories(test_arena_allocator PRIVATE src/)
 add_test(NAME test_arena_allocator COMMAND test_arena_allocator)
 
-add_executable(test_bloom_filter tests/test_bloom_filter.cpp src/index/BloomFilter.cpp src/index/QueryEngine.cpp src/crypto/Hash.cpp)
+add_executable(test_bloom_filter tests/test_bloom_filter.cpp src/index/BloomFilter.cpp src/index/QueryEngine.cpp src/crypto/Hash.cpp src/memory/ArenaAllocator.cpp src/security/LifecycleManager.cpp src/monitor/SystemMonitor.cpp)
 target_include_directories(test_bloom_filter PRIVATE src/)
 add_test(NAME test_bloom_filter COMMAND test_bloom_filter)
 
@@ -46,11 +46,11 @@ add_executable(test_availability tests/test_availability.cpp src/network/Server.
 target_include_directories(test_availability PRIVATE src/)
 add_test(NAME test_availability COMMAND test_availability)
 
-add_executable(test_concurrency tests/test_concurrency.cpp src/index/QueryEngine.cpp src/index/BloomFilter.cpp src/crypto/Hash.cpp)
+add_executable(test_concurrency tests/test_concurrency.cpp src/index/QueryEngine.cpp src/index/BloomFilter.cpp src/crypto/Hash.cpp src/memory/ArenaAllocator.cpp src/security/LifecycleManager.cpp src/monitor/SystemMonitor.cpp)
 target_include_directories(test_concurrency PRIVATE src/)
 add_test(NAME test_concurrency COMMAND test_concurrency)
 
-add_executable(test_memory_isolation tests/test_memory_isolation.cpp src/memory/MemoryManager.cpp src/memory/ArenaAllocator.cpp)
+add_executable(test_memory_isolation tests/test_memory_isolation.cpp src/memory/MemoryManager.cpp src/memory/ArenaAllocator.cpp src/security/LifecycleManager.cpp src/monitor/SystemMonitor.cpp)
 target_include_directories(test_memory_isolation PRIVATE src/)
 add_test(NAME test_memory_isolation COMMAND test_memory_isolation)
 
@@ -63,6 +63,9 @@ add_executable(benchmark_1m
 	src/index/BloomFilter.cpp
 	src/index/QueryEngine.cpp
 	src/crypto/Hash.cpp
+	src/memory/ArenaAllocator.cpp
+	src/security/LifecycleManager.cpp
+	src/monitor/SystemMonitor.cpp
 )
 target_include_directories(benchmark_1m PRIVATE src/)
 add_test(NAME benchmark_1m COMMAND benchmark_1m)
@@ -89,6 +92,7 @@ set_tests_properties(test_akkon_instance PROPERTIES ENVIRONMENT "AKKON_BINARY=$<
 
 add_executable(test_database
 	tests/test_database.cpp
+	src/testsuite/TestFramework.cpp
 	sqlite/sqlite3.c
 )
 target_include_directories(test_database PRIVATE sqlite/ src/)
@@ -96,5 +100,45 @@ target_compile_options(test_database PRIVATE -pthread)
 add_test(NAME test_database COMMAND test_database)
 set_tests_properties(test_database PROPERTIES LABELS integration)
 set_tests_properties(test_database PROPERTIES ENVIRONMENT "AKKON_BINARY=$<TARGET_FILE:Akkon>")
+
+add_executable(test_os_compatibility
+	tests/test_os_compatibility.cpp
+	src/construction/Utils.cpp
+	src/network/Server.cpp
+	src/monitor/SystemMonitor.cpp
+	src/security/LifecycleManager.cpp
+)
+target_include_directories(test_os_compatibility PRIVATE src/)
+add_test(NAME test_os_compatibility COMMAND test_os_compatibility)
+set_tests_properties(test_os_compatibility PROPERTIES LABELS compatibility)
+
+add_executable(test_memory_safety
+	tests/test_memory_safety.cpp
+	src/memory/ArenaAllocator.cpp
+	src/security/LifecycleManager.cpp
+	src/monitor/SystemMonitor.cpp
+)
+target_include_directories(test_memory_safety PRIVATE src/)
+add_test(NAME test_memory_safety COMMAND test_memory_safety)
+
+add_executable(test_database_integrity
+	tests/test_database_integrity.cpp
+	src/db/DataStorage.cpp
+	src/index/QueryEngine.cpp
+	src/index/BloomFilter.cpp
+	src/crypto/Hash.cpp
+	src/memory/ArenaAllocator.cpp
+	src/security/LifecycleManager.cpp
+	src/monitor/SystemMonitor.cpp
+	src/construction/MasterDB.cpp
+	src/construction/Utils.cpp
+	sqlite/sqlite3.c
+)
+target_include_directories(test_database_integrity PRIVATE sqlite/ src/)
+target_compile_options(test_database_integrity PRIVATE -pthread)
+add_test(NAME test_database_integrity COMMAND test_database_integrity)
+set_tests_properties(test_database_integrity PROPERTIES LABELS integration)
+
+
 
 

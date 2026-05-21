@@ -117,6 +117,32 @@ void Server::start() {
         }
         last_state = current_state;
 
+        // Process pending client actions
+        {
+            std::lock_guard<std::mutex> lock(m_action_mutex);
+            for (const auto& action : m_pending_actions) {
+                if (action.type == ActionType::CLOSE_CLIENT) {
+                    for (auto& pfd : m_fds) {
+                        if (pfd.fd == action.fd) {
+                            if (monitor::SystemMonitor::isDebugMode()) {
+                                monitor::SystemMonitor::log(monitor::LogLevel::DEBUG, "Closing client connection (FD: " + std::to_string(pfd.fd) + ")");
+                            }
+                            close_socket(pfd.fd);
+                            pfd.fd = (socket_t)-1;
+                        }
+                    }
+                } else if (action.type == ActionType::ENABLE_POLLING) {
+                    for (auto& pfd : m_fds) {
+                        if (pfd.fd == action.fd) {
+                            pfd.events = POLLIN;
+                        }
+                    }
+                }
+            }
+            m_pending_actions.clear();
+        }
+        m_fds.erase(std::remove_if(m_fds.begin(), m_fds.end(), [](const pollfd& p) { return p.fd == (socket_t)-1; }), m_fds.end());
+
         int ret = socket_poll(m_fds.data(), m_fds.size(), 100);
         if (ret < 0) break;
         if (ret == 0) continue;
@@ -152,15 +178,31 @@ void Server::start() {
                     close_socket(m_fds[i].fd);
                     m_fds[i].fd = (socket_t)-1;
                 } else {
-                    if (m_handler) {
-                        m_handler(m_fds[i].fd, std::string(buffer, bytes));
-                    }
+                    // Suspend polling on this client socket
+                    m_fds[i].events = 0;
+                    socket_t fd = m_fds[i].fd;
+                    std::string data(buffer, bytes);
+                    m_thread_pool.enqueue([this, fd, data = std::move(data)]() {
+                        if (m_handler) {
+                            m_handler(fd, data);
+                        }
+                    });
                 }
             }
         }
 
         m_fds.erase(std::remove_if(m_fds.begin(), m_fds.end(), [](const pollfd& p) { return p.fd == (socket_t)-1; }), m_fds.end());
     }
+}
+
+void Server::closeClient(socket_t fd) {
+    std::lock_guard<std::mutex> lock(m_action_mutex);
+    m_pending_actions.push_back({fd, ActionType::CLOSE_CLIENT});
+}
+
+void Server::enablePolling(socket_t fd) {
+    std::lock_guard<std::mutex> lock(m_action_mutex);
+    m_pending_actions.push_back({fd, ActionType::ENABLE_POLLING});
 }
 
 } // namespace network
