@@ -5,53 +5,125 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Akkon Server Dashboard</title>
     <link rel="stylesheet" href="/css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Akkon Server Dashboard</h1>
-            <div class="status-indicator">
-                <span class="dot online"></span>
-                <span id="server-status">Online</span>
+            <div class="header-left">
+                <h1>Akkon Server</h1>
+                <span class="sub-badge">Developer Console</span>
+            </div>
+            <div class="status-indicator offline">
+                <span class="dot"></span>
+                <span id="server-status">DISCONNECTED</span>
             </div>
         </header>
         
-        <main>
-            <div class="card metrics-card">
-                <h2>MEMORY USAGE</h2>
-                <div class="metric"><span class="label">ALLOCATED</span><span class="value" id="mem-allocated">0 MB</span></div>
-                <div class="metric"><span class="label">CAPACITY</span><span class="value" id="mem-capacity">0 MB</span></div>
-            </div>
+        <div class="dashboard-layout">
+            <aside class="sidebar">
+                <div class="card metrics-card">
+                    <h2>System Health & Monitor</h2>
+                    
+                    <div class="metric-group">
+                        <div class="metric-header">
+                            <span class="label">Reliability Score</span>
+                            <span class="value" id="sys-reliability">100%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="reliability-bar" style="width: 100%;"></div>
+                        </div>
+                    </div>
 
-            <div class="card queries-card">
-                <h2>QUERY STATS</h2>
-                <div class="metric"><span class="label">TOTAL</span><span class="value" id="total-queries">0</span></div>
-                <div class="metric"><span class="label">HIT RATE</span><span class="value" id="hit-rate">0%</span></div>
-            </div>
+                    <div class="metric-group">
+                        <div class="metric-header">
+                            <span class="label">Memory (Arena RAM)</span>
+                            <span class="value"><span id="ram-allocated">0.00</span> / <span id="ram-capacity">0.00</span> MB</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="ram-bar" style="width: 0%; background: var(--accent-purple);"></div>
+                        </div>
+                    </div>
 
-            <div class="card insert-card">
-                <h2>REGISTER USER</h2>
-                <input type="text" id="ins-email" placeholder="EMAIL">
-                <input type="password" id="ins-pass" placeholder="PASSWORD">
-                <button onclick="insertUser()">INSERT</button>
-                <div class="metric" style="margin-top:15px"><span class="label">STATUS</span><span class="value" id="ins-status">-</span></div>
-            </div>
+                    <div class="metric-group">
+                        <div class="metric-header">
+                            <span class="label">Available Disk Space</span>
+                            <span class="value" id="sys-disk">0.00 MB</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="disk-bar" style="width: 100%; background: var(--accent-cyan);"></div>
+                        </div>
+                    </div>
 
-            <div class="card search-card">
-                <h2>QUERY DB</h2>
-                <input type="text" id="qry-email" placeholder="EMAIL">
-                <button onclick="queryUser()">CHECK</button>
-                <div class="metric" style="margin-top:15px"><span class="label">RESULT</span><span class="value" id="qry-result">-</span></div>
-            </div>
+                    <div class="metric-divider"></div>
 
-            <div class="card debug-card">
-                <h2>DEBUG TOOLS</h2>
-                <div class="metric"><span class="label">PORT</span><span class="value" id="dbg-port">8080</span></div>
-                <div class="metric"><span class="label">INTERFACE</span><span class="value" id="dbg-interface">0.0.0.0</span></div>
-                <button onclick="fetchDebug()" style="margin-top:15px">REFRESH INTERFACES</button>
-            </div>
-        </main>
+                    <div class="simple-metric">
+                        <span class="label">Total API Transactions</span>
+                        <span class="value highlight" id="total-queries">0</span>
+                    </div>
+                </div>
+
+                <div class="card config-card">
+                    <h2>Configuration</h2>
+                    <div class="simple-metric">
+                        <span class="label">Binding Port</span>
+                        <span class="value" id="dbg-port">2409</span>
+                    </div>
+                    <div class="simple-metric">
+                        <span class="label">Access Interface</span>
+                        <span class="value" id="dbg-interface">0.0.0.0</span>
+                    </div>
+                    <button class="btn btn-secondary" onclick="fetchDebug()">Refresh Status</button>
+                </div>
+            </aside>
+
+            <main class="main-content">
+                <div class="card debugger-card">
+                    <h2>Debugger Actions</h2>
+                    
+                    <div class="action-grid">
+                        <div class="action-section">
+                            <h3>Register Identity (POST)</h3>
+                            <div class="input-group">
+                                <input type="text" id="ins-identifier" placeholder="IDENTIFIER (e.g. Email)">
+                                <input type="password" id="ins-pwk" placeholder="PASSWORD KEY">
+                            </div>
+                            <button class="btn btn-primary" onclick="insertUser()">Insert via API</button>
+                            <div class="status-box">
+                                <span class="label">Status</span>
+                                <span class="value status-badge" id="ins-status">-</span>
+                            </div>
+                        </div>
+
+                        <div class="action-divider"></div>
+
+                        <div class="action-section">
+                            <h3>Query Index (GET)</h3>
+                            <div class="input-group">
+                                <input type="text" id="qry-identifier" placeholder="IDENTIFIER">
+                            </div>
+                            <button class="btn btn-primary" onclick="queryUser()">Check via API</button>
+                            <div class="status-box">
+                                <span class="label">Query Result</span>
+                                <span class="value status-badge" id="qry-result">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card console-card">
+                    <div class="console-header">
+                        <h2>Live Debug Logs</h2>
+                        <div class="console-actions">
+                            <span class="console-dot red"></span>
+                            <span class="console-dot yellow"></span>
+                            <span class="console-dot green"></span>
+                        </div>
+                    </div>
+                    <div id="debug-logs" class="terminal-logs"></div>
+                </div>
+            </main>
+        </div>
     </div>
     <script src="/js/app.js"></script>
 </body>

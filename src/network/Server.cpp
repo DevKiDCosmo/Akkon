@@ -56,8 +56,9 @@ void Server::stop() {
     }
 }
 
-void Server::sendData(socket_t client_fd, const std::string& data) {
-    send(client_fd, data.c_str(), data.size(), 0);
+bool Server::sendData(socket_t client_fd, const std::string& data) {
+    ssize_t sent = send(client_fd, data.c_str(), data.size(), 0);
+    return sent >= 0;
 }
 
 void Server::start() {
@@ -123,6 +124,9 @@ void Server::start() {
         if (m_fds[0].revents & POLLIN) {
             socket_t client_fd = accept(m_server_fd, nullptr, nullptr);
             if (client_fd != (socket_t)-1) {
+                if (monitor::SystemMonitor::isDebugMode()) {
+                    monitor::SystemMonitor::log(monitor::LogLevel::DEBUG, "New connection accepted (FD: " + std::to_string(client_fd) + ")");
+                }
 #ifdef _WIN32
                 u_long c_mode = 1;
                 ioctlsocket(client_fd, FIONBIO, &c_mode);
@@ -142,6 +146,9 @@ void Server::start() {
                 char buffer[4096];
                 ssize_t bytes = recv(m_fds[i].fd, buffer, sizeof(buffer), 0);
                 if (bytes <= 0) {
+                    if (monitor::SystemMonitor::isDebugMode()) {
+                        monitor::SystemMonitor::log(monitor::LogLevel::DEBUG, "Client disconnected (FD: " + std::to_string(m_fds[i].fd) + ")");
+                    }
                     close_socket(m_fds[i].fd);
                     m_fds[i].fd = (socket_t)-1;
                 } else {

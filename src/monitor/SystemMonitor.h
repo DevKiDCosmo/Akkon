@@ -21,6 +21,7 @@ public:
     static bool init(bool debug_mode = false);
     static void log(LogLevel level, const std::string& message);
     static void setDebugMode(bool debug_mode);
+    static bool isDebugMode() { return s_debug_mode; }
     
 #ifndef _WIN32
     static void runWatchdog(int log_read_fd, pid_t main_pid);

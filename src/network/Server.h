@@ -24,12 +24,13 @@ public:
 
     void start();
     void stop();
+    bool isRunning() const { return m_running; }
     void disconnectAll();
 
     using DataHandler = std::function<void(socket_t, const std::string&)>;
     void setDataHandler(DataHandler handler);
 
-    void sendData(socket_t client_fd, const std::string& data);
+    bool sendData(socket_t client_fd, const std::string& data);
 
 private:
     uint16_t m_port;

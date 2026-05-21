@@ -8,5 +8,33 @@
       <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/db/master.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="f106b708-733b-4c97-b0e7-91a52b6faf5f" uuid="8bd142f8-35af-47ed-a57f-2ee8635aeac0">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/db/f106b708-733b-4c97-b0e7-91a52b6faf5f.db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="eebe4423-d431-4b47-bbb8-e7f9d5ae8227" uuid="79e32fbc-4db4-4b2c-bc9b-134520b10e50">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/db/eebe4423-d431-4b47-bbb8-e7f9d5ae8227.db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="b0935d33-2736-43e7-bc92-7573f0388cdc" uuid="57515790-d96f-470a-b5b1-668f21435cef">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/db/b0935d33-2736-43e7-bc92-7573f0388cdc.db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="1340734c-3f66-4d8e-99ae-25803a06af47" uuid="275e5a99-30c0-49e2-9535-70db12141110">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/db/1340734c-3f66-4d8e-99ae-25803a06af47.db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>

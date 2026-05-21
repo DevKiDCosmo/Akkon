@@ -124,6 +124,11 @@ void MasterDB::recreateMissing(const std::vector<DatabaseInfo>& missing) const {
             std::cerr << "[ERROR] SQL error: " << errMsg << std::endl;
             sqlite3_free(errMsg);
         }
+        
+        // Ensure information table exists
+        const char* sqlData = "CREATE TABLE IF NOT EXISTS information (uuid TEXT, identifier TEXT, pwk TEXT);";
+        sqlite3_exec(db, sqlData, nullptr, nullptr, nullptr);
+
         std::string insertSql = "INSERT OR REPLACE INTO metadata VALUES ('" + info.uuid + "', '" + info.creationDate + "', '" + escapeSqlString(dbPath.string()) + "');";
         rc = sqlite3_exec(db, insertSql.c_str(), nullptr, nullptr, &errMsg);
         if (rc != SQLITE_OK) {
@@ -223,18 +228,26 @@ DatabaseInfo MasterDB::createNewDatabase() {
         std::cerr << "[ERROR] SQL error: " << errMsg << std::endl;
         sqlite3_free(errMsg);
     }
+    
+    // Ensure information table exists
+    const char* sqlData = "CREATE TABLE IF NOT EXISTS information (uuid TEXT, identifier TEXT, pwk TEXT);";
+    sqlite3_exec(db, sqlData, nullptr, nullptr, nullptr);
+
     std::string insertSql = "INSERT INTO metadata VALUES ('" + info.uuid + "', '" + info.creationDate + "', '" + escapeSqlString(dbPath.string()) + "');";
     rc = sqlite3_exec(db, insertSql.c_str(), nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         std::cerr << "[ERROR] SQL error: " << errMsg << std::endl;
         sqlite3_free(errMsg);
     }
+    
     sqlite3_close(db);
     info.filePos = dbPath.string();
     info.status = "active";
     registerDatabase(info);
     return info;
 }
+
+
 
 } // namespace construction
 

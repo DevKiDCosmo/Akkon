@@ -7,4 +7,3 @@ struct DatabaseInfo {
     std::string filePos;
     std::string status;
 };
-

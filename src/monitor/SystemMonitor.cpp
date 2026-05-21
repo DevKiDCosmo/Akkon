@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <poll.h>
+#include <signal.h>
+#include <errno.h>
 #define io_write write
 #else
 #include <io.h>
@@ -91,7 +93,7 @@ bool SystemMonitor::init(bool debug_mode) {
 }
 
 void SystemMonitor::log(LogLevel level, const std::string& message) {
-    if (level == LogLevel::DEBUG && !s_debug_mode) return;
+    if (!s_debug_mode && level != LogLevel::ERROR) return;
 
     std::string level_str;
     switch (level) {
@@ -128,6 +130,8 @@ void SystemMonitor::runWatchdog(int log_read_fd, pid_t main_pid) {
     std::ofstream log_file("akkon_server.log", std::ios::app);
     log_file << "--- Watchdog Started (Monitoring PID " << main_pid << ") ---\n";
     log_file.flush();
+    std::cout << "--- Watchdog Started (Monitoring PID " << main_pid << ") ---\n";
+    std::cout.flush();
 
     pollfd pfd;
     pfd.fd = log_read_fd;
@@ -143,21 +147,26 @@ void SystemMonitor::runWatchdog(int log_read_fd, pid_t main_pid) {
                 buffer[bytes] = '\0';
                 log_file << buffer;
                 log_file.flush();
+                std::cout << buffer;
+                std::cout.flush();
             } else if (bytes == 0) {
                 main_alive = false;
             }
         }
         if (main_alive) {
-            int status;
-            pid_t p = waitpid(main_pid, &status, WNOHANG);
-            if (p == main_pid || p == -1) {
+            if (getppid() == 1 || (kill(main_pid, 0) == -1 && errno == ESRCH)) {
                 log_file << "--- Main process exited ---\n";
                 log_file.flush();
+                std::cout << "--- Main process exited ---\n";
+                std::cout.flush();
                 main_alive = false;
             }
         }
     }
     log_file << "--- Watchdog Exiting ---\n";
+    log_file.flush();
+    std::cout << "--- Watchdog Exiting ---\n";
+    std::cout.flush();
     close(log_read_fd);
 }
 #else
@@ -165,6 +174,8 @@ void SystemMonitor::runWatchdog(HANDLE log_read_pipe, DWORD main_pid) {
     std::ofstream log_file("akkon_server.log", std::ios::app);
     log_file << "--- Watchdog Started (Monitoring PID " << main_pid << ") ---\n";
     log_file.flush();
+    std::cout << "--- Watchdog Started (Monitoring PID " << main_pid << ") ---\n";
+    std::cout.flush();
 
     HANDLE hParent = OpenProcess(SYNCHRONIZE, FALSE, main_pid);
     char buffer[1024];
@@ -177,6 +188,8 @@ void SystemMonitor::runWatchdog(HANDLE log_read_pipe, DWORD main_pid) {
                 buffer[bytesRead] = '\0';
                 log_file << buffer;
                 log_file.flush();
+                std::cout << buffer;
+                std::cout.flush();
             }
         }
         
@@ -184,6 +197,8 @@ void SystemMonitor::runWatchdog(HANDLE log_read_pipe, DWORD main_pid) {
             if (WaitForSingleObject(hParent, 100) == WAIT_OBJECT_0) {
                 log_file << "--- Main process exited ---\n";
                 log_file.flush();
+                std::cout << "--- Main process exited ---\n";
+                std::cout.flush();
                 break;
             }
         } else {
@@ -193,6 +208,9 @@ void SystemMonitor::runWatchdog(HANDLE log_read_pipe, DWORD main_pid) {
     
     if (hParent) CloseHandle(hParent);
     log_file << "--- Watchdog Exiting ---\n";
+    log_file.flush();
+    std::cout << "--- Watchdog Exiting ---\n";
+    std::cout.flush();
 }
 #endif
 

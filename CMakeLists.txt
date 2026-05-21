@@ -15,12 +15,15 @@ add_executable(Akkon
 	src/network/protocols/WebSocketHandler.cpp
 	src/network/protocols/AkkonProtocolHandler.cpp
 	src/monitor/SystemMonitor.cpp
+	src/monitor/HealthMonitor.cpp
 	src/security/LifecycleManager.cpp
+	src/db/DataStorage.cpp
 	src/shell/ArgumentParser.cpp
 	src/shell/ArgumentRegistry.cpp
 	src/shell/Shell.cpp
 	src/construction/Utils.cpp
 	src/construction/MasterDB.cpp
+	src/testsuite/TestFramework.cpp
 	sqlite/sqlite3.c
 )
 target_include_directories(Akkon PRIVATE sqlite/ src/)
@@ -64,4 +67,34 @@ add_executable(benchmark_1m
 target_include_directories(benchmark_1m PRIVATE src/)
 add_test(NAME benchmark_1m COMMAND benchmark_1m)
 set_tests_properties(benchmark_1m PROPERTIES LABELS benchmark)
+
+# TestFramework-based integration tests
+add_executable(test_akkon_basic
+	tests/test_akkon_basic.cpp
+	src/testsuite/TestFramework.cpp
+)
+target_include_directories(test_akkon_basic PRIVATE src/)
+add_test(NAME test_akkon_basic COMMAND test_akkon_basic)
+set_tests_properties(test_akkon_basic PROPERTIES LABELS integration)
+set_tests_properties(test_akkon_basic PROPERTIES ENVIRONMENT "AKKON_BINARY=$<TARGET_FILE:Akkon>")
+
+add_executable(test_akkon_instance
+	tests/test_akkon_instance.cpp
+	src/testsuite/TestFramework.cpp
+)
+target_include_directories(test_akkon_instance PRIVATE src/)
+add_test(NAME test_akkon_instance COMMAND test_akkon_instance)
+set_tests_properties(test_akkon_instance PROPERTIES LABELS integration)
+set_tests_properties(test_akkon_instance PROPERTIES ENVIRONMENT "AKKON_BINARY=$<TARGET_FILE:Akkon>")
+
+add_executable(test_database
+	tests/test_database.cpp
+	sqlite/sqlite3.c
+)
+target_include_directories(test_database PRIVATE sqlite/ src/)
+target_compile_options(test_database PRIVATE -pthread)
+add_test(NAME test_database COMMAND test_database)
+set_tests_properties(test_database PROPERTIES LABELS integration)
+set_tests_properties(test_database PROPERTIES ENVIRONMENT "AKKON_BINARY=$<TARGET_FILE:Akkon>")
+
 

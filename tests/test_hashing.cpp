@@ -3,6 +3,8 @@
 #include <iostream>
 
 int main() {
+    // TODO: Needs real tests
+
     std::string test_str = "Akkon";
     std::string hash_out = crypto::Hash::sha256(test_str);
     

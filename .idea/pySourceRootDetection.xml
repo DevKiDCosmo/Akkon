@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PySourceRootDetectionService">
+    <option name="sourcePathsSet">
+      <set>
+        <option value="$PROJECT_DIR$/webview/venv/lib/python3.9/site-packages/websockets" />
+        <option value="$PROJECT_DIR$/webview/venv/lib/python3.9/site-packages" />
+        <option value="$PROJECT_DIR$/tests/test_framework.cpp" />
+        <option value="$PROJECT_DIR$/src/index/BloomFilter.cpp" />
+        <option value="$PROJECT_DIR$/src/shell/ArgumentRegistry.cpp" />
+        <option value="$PROJECT_DIR$/tests/test_memory_isolation.cpp" />
+        <option value="$PROJECT_DIR$/tests/test_hashing.cpp" />
+        <option value="$PROJECT_DIR$/src/network/Server.cpp" />
+        <option value="$PROJECT_DIR$/tests/benchmark_1m.cpp" />
+        <option value="$PROJECT_DIR$/src/construction/MasterDB.cpp" />
+        <option value="$PROJECT_DIR$/src/monitor/SystemMonitor.cpp" />
+        <option value="$PROJECT_DIR$/src/construction/Utils.cpp" />
+        <option value="$PROJECT_DIR$/src/network/protocols/WebSocketHandler.cpp" />
+        <option value="$PROJECT_DIR$/sqlite/sqlite3.c" />
+        <option value="$PROJECT_DIR$/src/main.cpp" />
+        <option value="$PROJECT_DIR$/tests/test_availability.cpp" />
+        <option value="$PROJECT_DIR$/src/crypto/Hash.cpp" />
+        <option value="$PROJECT_DIR$/src/network/protocols/AkkonProtocolHandler.cpp" />
+        <option value="$PROJECT_DIR$/src/shell/ArgumentParser.cpp" />
+        <option value="$PROJECT_DIR$/src/db/DataStorage.cpp" />
+        <option value="$PROJECT_DIR$/tests/test_bloom_filter.cpp" />
+        <option value="$PROJECT_DIR$/tests/test_concurrency.cpp" />
+        <option value="$PROJECT_DIR$/src/security/LifecycleManager.cpp" />
+        <option value="$PROJECT_DIR$/tests/test_network.cpp" />
+        <option value="$PROJECT_DIR$/src/memory/ArenaAllocator.cpp" />
+        <option value="$PROJECT_DIR$/src/monitor/HealthMonitor.cpp" />
+        <option value="$PROJECT_DIR$/src/index/QueryEngine.cpp" />
+        <option value="$PROJECT_DIR$/src/network/protocols/HttpHandler.cpp" />
+        <option value="$PROJECT_DIR$/tests/test_arena_allocator.cpp" />
+        <option value="$PROJECT_DIR$/src/memory/MemoryManager.cpp" />
+        <option value="$PROJECT_DIR$/src/shell/Shell.cpp" />
+        <option value="$PROJECT_DIR$/tests/test_akkon_basic.cpp" />
+        <option value="$PROJECT_DIR$/tests/test_akkon_instance.cpp" />
+      </set>
+    </option>
+  </component>
+</project>
